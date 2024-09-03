@@ -8,6 +8,7 @@
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
         input, button { margin-top: 10px; }
         #status { margin-top: 20px; }
+        #contractInfo { margin-top: 20px; font-size: 0.8em; color: #666; }
     </style>
 </head>
 <body>
@@ -16,8 +17,14 @@
     <input type="text" id="addressInput" placeholder="Enter your Pollen address">
     <button onclick="requestTokens()">Get POLLEN Tokens</button>
     <div id="status"></div>
+    <div id="contractInfo">
+        Faucet Contract Address: <span id="contractAddress"></span>
+    </div>
 
     <script>
+        const faucetAddress = "0x7D499926F06c49eb47664c784E4639Fd6dE92304";
+        document.getElementById("contractAddress").textContent = faucetAddress;
+
         async function requestTokens() {
             const address = document.getElementById("addressInput").value;
             const statusDiv = document.getElementById("status");
