@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLLEN Token Faucet</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
         input, button { margin-top: 10px; }
@@ -23,13 +24,16 @@
 
     <script>
         const faucetAddress = "0x7D499926F06c49eb47664c784E4639Fd6dE92304";
+        const faucetABI = [
+            "function requestTokens() public"
+        ];
         document.getElementById("contractAddress").textContent = faucetAddress;
 
         async function requestTokens() {
             const address = document.getElementById("addressInput").value;
             const statusDiv = document.getElementById("status");
 
-            if (!address) {
+            if (!ethers.utils.isAddress(address)) {
                 statusDiv.innerHTML = "Please enter a valid Pollen address.";
                 return;
             }
@@ -37,36 +41,35 @@
             statusDiv.innerHTML = "Requesting tokens...";
 
             try {
-                const response = await fetch('/request-tokens', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ address: address }),
-                });
+                const provider = new ethers.providers.JsonRpcProvider('https://rpc.pollenpost.io');
+                const faucetContract = new ethers.Contract(faucetAddress, faucetABI, provider);
 
-                console.log("Response status:", response.status);
-                console.log("Response headers:", response.headers);
+                // We need to create a signer to send a transaction
+                // This will prompt the user to connect their wallet
+                await provider.send("eth_requestAccounts", []);
+                const signer = provider.getSigner();
+                const faucetWithSigner = faucetContract.connect(signer);
 
-                const responseText = await response.text();
-                console.log("Response text:", responseText);
+                const tx = await faucetWithSigner.requestTokens();
+                statusDiv.innerHTML = "Transaction sent. Waiting for confirmation...";
+                
+                const receipt = await tx.wait();
+                console.log("Transaction receipt:", receipt);
 
-                let result;
-                try {
-                    result = JSON.parse(responseText);
-                } catch (e) {
-                    console.error("Error parsing JSON:", e);
-                    throw new Error("Invalid response from server: " + responseText);
-                }
-
-                if (response.ok) {
+                if (receipt.status === 1) {
                     statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
                 } else {
-                    statusDiv.innerHTML = "Error: " + (result.message || "Unknown error occurred");
+                    statusDiv.innerHTML = "Transaction failed. Please try again.";
                 }
             } catch (error) {
-                statusDiv.innerHTML = "Error: " + error.message;
                 console.error("Detailed error:", error);
+                if (error.message.includes("You can only request once per day")) {
+                    statusDiv.innerHTML = "Error: You can only request tokens once every 24 hours. Please try again later.";
+                } else if (error.message.includes("Faucet is empty")) {
+                    statusDiv.innerHTML = "Error: Faucet is empty. Please try again later.";
+                } else {
+                    statusDiv.innerHTML = "Error: " + error.message;
+                }
             }
         }
     </script>
