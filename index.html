@@ -4,77 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>POLLEN Token Faucet</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
-        button { margin-top: 10px; }
+        input, button { margin-top: 10px; }
         #status { margin-top: 20px; }
     </style>
 </head>
 <body>
     <h1>POLLEN Token Faucet</h1>
-    <p>Get 0.1 POLLEN test tokens</p>
-    <button onclick="connectWallet()">Connect Wallet</button>
-    <button onclick="requestTokens()" id="claimButton" style="display: none;">Get POLLEN Tokens</button>
+    <p>Get 0.1 POLLEN test tokens (limit once per 24 hours)</p>
+    <input type="text" id="addressInput" placeholder="Enter your Pollen address">
+    <button onclick="requestTokens()">Get POLLEN Tokens</button>
     <div id="status"></div>
 
     <script>
-        const faucetAddress = "0x91cf210AA2b6DBb26698323677faac9fbb069b8B";
-        const faucetABI = [
-            "function requestTokens() public"
-        ];
-        let signer;
-
-        const pollenNetwork = {
-            name: 'Pollen',
-            chainId: 2026,
-            _defaultProvider: (providers) => new providers.JsonRpcProvider('https://rpc.pollenpost.io')
-        };
-
-        async function connectWallet() {
-            const statusDiv = document.getElementById("status");
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: '0x7EA' }], // 2026 in hexadecimal
-                    });
-                    const provider = new ethers.providers.Web3Provider(window.ethereum, pollenNetwork);
-                    signer = provider.getSigner();
-                    const address = await signer.getAddress();
-                    statusDiv.innerHTML = `Connected: ${address}`;
-                    document.getElementById("claimButton").style.display = "block";
-                } catch (error) {
-                    statusDiv.innerHTML = "Error connecting wallet: " + error.message;
-                }
-            } else {
-                statusDiv.innerHTML = "Please install MetaMask or another Web3 provider.";
-            }
-        }
-
         async function requestTokens() {
+            const address = document.getElementById("addressInput").value;
             const statusDiv = document.getElementById("status");
-            if (!signer) {
-                statusDiv.innerHTML = "Please connect your wallet first.";
+
+            if (!address) {
+                statusDiv.innerHTML = "Please enter a valid Pollen address.";
                 return;
             }
 
-            try {
-                const faucetContract = new ethers.Contract(faucetAddress, faucetABI, signer);
+            statusDiv.innerHTML = "Requesting tokens...";
 
-                statusDiv.innerHTML = "Requesting tokens...";
-                const tx = await faucetContract.requestTokens({
-                    gasLimit: 100000 // Set a manual gas limit
+            try {
+                const response = await fetch('/request-tokens', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ address: address }),
                 });
-                await tx.wait();
-                statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
-            } catch (error) {
-                if (error.message.includes("execution reverted")) {
-                    statusDiv.innerHTML = "Error: You may have already claimed POLLEN test token in the last 24 hours.";
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
                 } else {
-                    statusDiv.innerHTML = "Error: " + error.message;
+                    if (result.message.includes("You can only request once per day")) {
+                        statusDiv.innerHTML = "Error: You can only request tokens once every 24 hours. Please try again later.";
+                    } else {
+                        statusDiv.innerHTML = "Error: " + result.message;
+                    }
                 }
+            } catch (error) {
+                statusDiv.innerHTML = "Error: " + error.message;
             }
         }
     </script>

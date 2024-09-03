@@ -1,42 +1,31 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.3;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract Faucet {
-    address public owner;
+contract PollenFaucet {
     IERC20 public pollenToken;
     uint256 public amountAllowed = 0.1 ether; // 0.1 POLLEN (assuming 18 decimals)
-    mapping(address => uint256) public lockTime;
+    mapping(address => uint256) public lastRequestTime;
 
     constructor(address _tokenAddress) {
-        owner = msg.sender;
         pollenToken = IERC20(_tokenAddress);
     }
 
-    modifier onlyOwner {
-        require(msg.sender == owner, "Only owner can call this function.");
-        _;
+    function requestTokens() external {
+        require(block.timestamp >= lastRequestTime[msg.sender] + 1 days, "You can only request once per day");
+        require(pollenToken.balanceOf(address(this)) >= amountAllowed, "Faucet is empty");
+
+        lastRequestTime[msg.sender] = block.timestamp;
+        require(pollenToken.transfer(msg.sender, amountAllowed), "Transfer failed");
     }
 
-    function setOwner(address newOwner) public onlyOwner {
-        owner = newOwner;
+    // Allow anyone to deposit POLLEN tokens to the faucet
+    function deposit(uint256 amount) external {
+        require(pollenToken.transferFrom(msg.sender, address(this), amount), "Deposit failed");
     }
 
-    function setAmountAllowed(uint256 _amountAllowed) public onlyOwner {
-        amountAllowed = _amountAllowed;
-    }
-
-    function requestTokens() public {
-        require(block.timestamp > lockTime[msg.sender], "You already claimed POLLEN test token in the last 24 hours.");
-        require(pollenToken.balanceOf(address(this)) >= amountAllowed, "Not enough tokens in the faucet.");
-
-        lockTime[msg.sender] = block.timestamp + 1 days;
-        require(pollenToken.transfer(msg.sender, amountAllowed), "Token transfer failed.");
-    }
-
-    function withdrawTokens(uint256 amount) public onlyOwner {
-        require(pollenToken.transfer(owner, amount), "Token withdrawal failed.");
-    }
+    // Allow receiving POLLEN tokens directly
+    receive() external payable {}
 }
