@@ -14,21 +14,43 @@
 <body>
     <h1>POLLEN Token Faucet</h1>
     <p>Get 0.1 POLLEN test tokens</p>
-    <button onclick="requestTokens()">Get POLLEN Tokens</button>
+    <button onclick="connectWallet()">Connect Wallet</button>
+    <button onclick="requestTokens()" id="claimButton" style="display: none;">Get POLLEN Tokens</button>
     <div id="status"></div>
 
     <script>
-        const faucetAddress = "YOUR_FAUCET_CONTRACT_ADDRESS";
+        const faucetAddress = "0x91cf210AA2b6DBb26698323677faac9fbb069b8B";
         const faucetABI = [
             "function requestTokens() public"
         ];
+        let signer;
+
+        async function connectWallet() {
+            const statusDiv = document.getElementById("status");
+            if (typeof window.ethereum !== 'undefined') {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    statusDiv.innerHTML = `Connected: ${address}`;
+                    document.getElementById("claimButton").style.display = "block";
+                } catch (error) {
+                    statusDiv.innerHTML = "Error connecting wallet: " + error.message;
+                }
+            } else {
+                statusDiv.innerHTML = "Please install MetaMask or another Web3 provider.";
+            }
+        }
 
         async function requestTokens() {
             const statusDiv = document.getElementById("status");
+            if (!signer) {
+                statusDiv.innerHTML = "Please connect your wallet first.";
+                return;
+            }
 
             try {
-                const provider = new ethers.providers.JsonRpcProvider("https://rpc.pollenpost.io");
-                const signer = provider.getSigner();
                 const faucetContract = new ethers.Contract(faucetAddress, faucetABI, signer);
 
                 statusDiv.innerHTML = "Requesting tokens...";
