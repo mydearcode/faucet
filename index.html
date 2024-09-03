@@ -12,7 +12,7 @@
 </head>
 <body>
     <h1>POLLEN Token Faucet</h1>
-    <p>Get 0.1 POLLEN test tokens (limit once per 24 hours)</p>
+    <p>Get 0.1 POLLEN tokens (limit once per 24 hours)</p>
     <input type="text" id="addressInput" placeholder="Enter your Pollen address">
     <button onclick="requestTokens()">Get POLLEN Tokens</button>
     <div id="status"></div>
@@ -43,11 +43,7 @@
                 if (response.ok) {
                     statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
                 } else {
-                    if (result.message.includes("You can only request once per day")) {
-                        statusDiv.innerHTML = "Error: You can only request tokens once every 24 hours. Please try again later.";
-                    } else {
-                        statusDiv.innerHTML = "Error: " + result.message;
-                    }
+                    statusDiv.innerHTML = "Error: " + result.message;
                 }
             } catch (error) {
                 statusDiv.innerHTML = "Error: " + error.message;

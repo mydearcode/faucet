@@ -2,30 +2,32 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
 contract PollenFaucet {
-    IERC20 public pollenToken;
-    uint256 public amountAllowed = 0.1 ether; // 0.1 POLLEN (assuming 18 decimals)
+    address public owner;
+    uint256 public amountAllowed = 0.1 ether; // 0.1 POLLEN
     mapping(address => uint256) public lastRequestTime;
 
-    constructor(address _tokenAddress) {
-        pollenToken = IERC20(_tokenAddress);
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
     }
 
     function requestTokens() external {
         require(block.timestamp >= lastRequestTime[msg.sender] + 1 days, "You can only request once per day");
-        require(pollenToken.balanceOf(address(this)) >= amountAllowed, "Faucet is empty");
+        require(address(this).balance >= amountAllowed, "Faucet is empty");
 
         lastRequestTime[msg.sender] = block.timestamp;
-        require(pollenToken.transfer(msg.sender, amountAllowed), "Transfer failed");
+        payable(msg.sender).transfer(amountAllowed);
     }
 
-    // Allow anyone to deposit POLLEN tokens to the faucet
-    function deposit(uint256 amount) external {
-        require(pollenToken.transferFrom(msg.sender, address(this), amount), "Deposit failed");
+    function withdraw(uint256 amount) external onlyOwner {
+        require(address(this).balance >= amount, "Insufficient balance");
+        payable(owner).transfer(amount);
     }
 
-    // Allow receiving POLLEN tokens directly
     receive() external payable {}
 }
