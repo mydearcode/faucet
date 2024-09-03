@@ -11,22 +11,12 @@ contract PollenFaucet {
         owner = msg.sender;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only the owner can call this function");
-        _;
-    }
-
-    function requestTokens() external {
-        require(block.timestamp >= lastRequestTime[msg.sender] + 1 days, "You can only request once per day");
+    function requestTokens(address recipient) public {
+        require(block.timestamp >= lastRequestTime[recipient] + 1 days, "You can only request once per day");
         require(address(this).balance >= amountAllowed, "Faucet is empty");
 
-        lastRequestTime[msg.sender] = block.timestamp;
-        payable(msg.sender).transfer(amountAllowed);
-    }
-
-    function withdraw(uint256 amount) external onlyOwner {
-        require(address(this).balance >= amount, "Insufficient balance");
-        payable(owner).transfer(amount);
+        lastRequestTime[recipient] = block.timestamp;
+        payable(recipient).transfer(amountAllowed);
     }
 
     receive() external payable {}

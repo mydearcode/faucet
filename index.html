@@ -23,9 +23,9 @@
     </div>
 
     <script>
-        const faucetAddress = "0x7D499926F06c49eb47664c784E4639Fd6dE92304";
+        const faucetAddress = "0xdaaA64E4785386ae146320fE938A94017498315d";
         const faucetABI = [
-            "function requestTokens() public"
+            "function requestTokens(address recipient) public"
         ];
         document.getElementById("contractAddress").textContent = faucetAddress;
 
@@ -46,11 +46,7 @@
 
                 // We need to create a signer to send a transaction
                 // This will prompt the user to connect their wallet
-                await provider.send("eth_requestAccounts", []);
-                const signer = provider.getSigner();
-                const faucetWithSigner = faucetContract.connect(signer);
-
-                const tx = await faucetWithSigner.requestTokens();
+                const tx = await faucetContract.requestTokens(address);
                 statusDiv.innerHTML = "Transaction sent. Waiting for confirmation...";
                 
                 const receipt = await tx.wait();
