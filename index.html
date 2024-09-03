@@ -2,110 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>POLLEN Faucet</title>
+    <title>POLLEN Token Faucet</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.0.umd.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; }
+        button { margin-top: 10px; }
+        #status { margin-top: 20px; }
+    </style>
 </head>
 <body>
-    <h2>POLLEN Faucet</h2>
-    <p>Enter your address below and click the button to get 0.1 POLLEN test token (once every 24 hours).</p>
-    <input type="text" id="addressInput" placeholder="Enter your address" style="width: 300px; padding: 5px; margin-bottom: 10px;">
-    <button id="claimBtn">Get 0.1 POLLEN</button>
-    <p id="status"></p>
+    <h1>POLLEN Token Faucet</h1>
+    <p>Get 0.1 POLLEN test tokens</p>
+    <button onclick="requestTokens()">Get POLLEN Tokens</button>
+    <div id="status"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
     <script>
-        // Define Web3 instance
-        let web3;
-        let contract;
-        const contractAddress = '0x346a46583eB77ED742673b3E9735fAEaA676394B'; // Your deployed contract address
-        const abi = [
-            // ABI from the Faucet contract
-            {
-                "inputs": [],
-                "name": "claimTokens",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            }
+        const faucetAddress = "YOUR_FAUCET_CONTRACT_ADDRESS";
+        const faucetABI = [
+            "function requestTokens() public"
         ];
 
-        // Network parameters for Pollen Chain
-        const networkParams = {
-            chainId: '0x7ea', // Chain ID 2026 in hexadecimal
-            chainName: 'Pollen Chain Testnet',
-            nativeCurrency: {
-                name: 'Pollen Token',
-                symbol: 'POL',
-                decimals: 18,
-            },
-            rpcUrls: ['https://rpc.pollenpost.io'], // Pollen Chain RPC URL
-            blockExplorerUrls: ['https://testplorer.pollenpost.io'], // Pollen Chain block explorer
-        };
-
-        // Function to switch network in MetaMask
-        async function switchNetwork() {
-            if (window.ethereum) {
-                try {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: networkParams.chainId }],
-                    });
-                } catch (switchError) {
-                    // If the network is not added, add it
-                    if (switchError.code === 4902) {
-                        try {
-                            await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [networkParams],
-                            });
-                        } catch (addError) {
-                            console.error('Failed to add network:', addError.message);
-                            document.getElementById('status').innerText = 'Failed to add network: ' + addError.message;
-                        }
-                    } else {
-                        console.error('Failed to switch network:', switchError.message);
-                        document.getElementById('status').innerText = 'Failed to switch network: ' + switchError.message;
-                    }
-                }
-            } else {
-                alert('MetaMask is not installed. Please install MetaMask to use this dApp.');
-            }
-        }
-
-        // Initialize web3 and connect to the contract
-        window.addEventListener('load', async () => {
-            if (window.ethereum) {
-                web3 = new Web3(window.ethereum);
-                await switchNetwork();
-                try {
-                    await window.ethereum.request({ method: 'eth_requestAccounts' });
-                    contract = new web3.eth.Contract(abi, contractAddress);
-                } catch (error) {
-                    document.getElementById('status').innerText = 'Failed to connect to MetaMask: ' + error.message;
-                }
-            } else {
-                document.getElementById('status').innerText = 'Please install MetaMask!';
-            }
-        });
-
-        // Event listener for the claim button
-        document.getElementById('claimBtn').addEventListener('click', async () => {
-            const userAddress = document.getElementById('addressInput').value.trim();
-
-            // Check if the address is valid
-            if (!web3.utils.isAddress(userAddress)) {
-                document.getElementById('status').innerText = 'Please enter a valid Ethereum address.';
-                return;
-            }
+        async function requestTokens() {
+            const statusDiv = document.getElementById("status");
 
             try {
-                await contract.methods.claimTokens().send({ from: userAddress });
-                document.getElementById('status').innerText = 'Successfully claimed 0.1 POLLEN!';
+                const provider = new ethers.providers.JsonRpcProvider("https://rpc.pollenpost.io");
+                const signer = provider.getSigner();
+                const faucetContract = new ethers.Contract(faucetAddress, faucetABI, signer);
+
+                statusDiv.innerHTML = "Requesting tokens...";
+                const tx = await faucetContract.requestTokens();
+                await tx.wait();
+                statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
             } catch (error) {
-                document.getElementById('status').innerText = 'Error: ' + error.message;
+                if (error.message.includes("You already claimed POLLEN test token in the last 24 hours")) {
+                    statusDiv.innerHTML = "Error: You already claimed POLLEN test token in the last 24 hours.";
+                } else {
+                    statusDiv.innerHTML = "Error: " + error.message;
+                }
             }
-        });
+        }
     </script>
 </body>
 </html>

@@ -2,56 +2,41 @@
 
 pragma solidity ^0.8.3;
 
-contract faucet {
-	
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-    //state variable to keep track of owner and amount of ETHER to dispense
+contract Faucet {
     address public owner;
-    uint public amountAllowed = 0.5 pollen;
+    IERC20 public pollenToken;
+    uint256 public amountAllowed = 0.1 ether; // 0.1 POLLEN (assuming 18 decimals)
+    mapping(address => uint256) public lockTime;
 
-
-    //mapping to keep track of requested rokens
-    //Address and blocktime + 1 day is saved in TimeLock
-    mapping(address => uint) public lockTime;
-
-
-    //constructor to set the owner
-    constructor() payable { 
-	owner = msg.sender;
+    constructor(address _tokenAddress) {
+        owner = msg.sender;
+        pollenToken = IERC20(_tokenAddress);
     }
 
-    //function modifier
     modifier onlyOwner {
         require(msg.sender == owner, "Only owner can call this function.");
-        _; 
+        _;
     }
 
-
-    //function to change the owner.  Only the owner of the contract can call this function
     function setOwner(address newOwner) public onlyOwner {
         owner = newOwner;
     }
 
-
-    //function to set the amount allowable to be claimed. Only the owner can call this function
-    function setAmountallowed(uint setAmountAllowed) public onlyOwner {
-        amountAllowed = setAmountAllowed;
+    function setAmountAllowed(uint256 _amountAllowed) public onlyOwner {
+        amountAllowed = _amountAllowed;
     }
 
-    // function to add funds to the smart contract
-    function addFunds() public payable { }
+    function requestTokens() public {
+        require(block.timestamp > lockTime[msg.sender], "You already claimed POLLEN test token in the last 24 hours.");
+        require(pollenToken.balanceOf(address(this)) >= amountAllowed, "Not enough tokens in the faucet.");
 
-    //function to send tokens from faucet to an address
-    function requestTokens(address payable _requestor) public payable onlyOwner {
+        lockTime[msg.sender] = block.timestamp + 1 days;
+        require(pollenToken.transfer(msg.sender, amountAllowed), "Token transfer failed.");
+    }
 
-        //perform a few checks to make sure function can execute
-        require(block.timestamp > lockTime[_requestor], "Lock time has not expired. Please try again later");
-        require(address(this).balance > amountAllowed, "Not enough funds in the faucet.");
-
-        //if the balance of this contract is greater then the requested amount send funds
-        _requestor.transfer(0.5 pollen);        
- 
-        //updates locktime 1 day from now
-        lockTime[_requestor] = block.timestamp + 1 days;
+    function withdrawTokens(uint256 amount) public onlyOwner {
+        require(pollenToken.transfer(owner, amount), "Token withdrawal failed.");
     }
 }
