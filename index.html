@@ -45,17 +45,24 @@
                     body: JSON.stringify({ address: address }),
                 });
 
-                const result = await response.json();
+                let result;
+                try {
+                    result = await response.json();
+                } catch (e) {
+                    throw new Error("Invalid response from server");
+                }
 
                 if (response.ok) {
                     statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
                 } else {
-                    statusDiv.innerHTML = "Error: " + result.message;
+                    statusDiv.innerHTML = "Error: " + (result.message || "Unknown error occurred");
                 }
             } catch (error) {
                 statusDiv.innerHTML = "Error: " + error.message;
+                console.error("Detailed error:", error);
             }
         }
     </script>
 </body>
 </html>
+        
