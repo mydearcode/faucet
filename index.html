@@ -45,11 +45,18 @@
                     body: JSON.stringify({ address: address }),
                 });
 
+                console.log("Response status:", response.status);
+                console.log("Response headers:", response.headers);
+
+                const responseText = await response.text();
+                console.log("Response text:", responseText);
+
                 let result;
                 try {
-                    result = await response.json();
+                    result = JSON.parse(responseText);
                 } catch (e) {
-                    throw new Error("Invalid response from server");
+                    console.error("Error parsing JSON:", e);
+                    throw new Error("Invalid response from server: " + responseText);
                 }
 
                 if (response.ok) {
@@ -65,4 +72,3 @@
     </script>
 </body>
 </html>
-        
