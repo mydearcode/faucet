@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POLLEN Faucet</title>
+</head>
+<body>
+    <h2>POLLEN Faucet</h2>
+    <p>Click the button below to get 0.1 POLLEN test token (once every 24 hours).</p>
+    <button id="claimBtn">Get 0.1 POLLEN</button>
+    <p id="status"></p>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+    <script>
+        // Define Web3 instance
+        let web3;
+        let contract;
+        const contractAddress = 'YOUR_FAUCET_CONTRACT_ADDRESS'; // Replace with your deployed contract address
+        const abi = [
+            // ABI from the Faucet contract
+            {
+                "inputs": [],
+                "name": "claimTokens",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        // Initialize web3
+        window.addEventListener('load', async () => {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const accounts = await web3.eth.getAccounts();
+                contract = new web3.eth.Contract(abi, contractAddress);
+            } else {
+                document.getElementById('status').innerText = 'Please install MetaMask!';
+            }
+        });
+
+        document.getElementById('claimBtn').addEventListener('click', async () => {
+            const accounts = await web3.eth.getAccounts();
+            const userAddress = accounts[0];
+
+            try {
+                await contract.methods.claimTokens().send({ from: userAddress });
+                document.getElementById('status').innerText = 'Successfully claimed 0.1 POLLEN!';
+            } catch (error) {
+                document.getElementById('status').innerText = error.message;
+            }
+        });
+    </script>
+</body>
+</html>
