@@ -64,12 +64,14 @@
                 const faucetContract = new ethers.Contract(faucetAddress, faucetABI, signer);
 
                 statusDiv.innerHTML = "Requesting tokens...";
-                const tx = await faucetContract.requestTokens();
+                const tx = await faucetContract.requestTokens({
+                    gasLimit: 100000 // Set a manual gas limit
+                });
                 await tx.wait();
                 statusDiv.innerHTML = "Tokens sent successfully! Check your wallet.";
             } catch (error) {
-                if (error.message.includes("You already claimed POLLEN test token in the last 24 hours")) {
-                    statusDiv.innerHTML = "Error: You already claimed POLLEN test token in the last 24 hours.";
+                if (error.message.includes("execution reverted")) {
+                    statusDiv.innerHTML = "Error: You may have already claimed POLLEN test token in the last 24 hours.";
                 } else {
                     statusDiv.innerHTML = "Error: " + error.message;
                 }
