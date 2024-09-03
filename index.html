@@ -8,7 +8,8 @@
 </head>
 <body>
     <h2>POLLEN Faucet</h2>
-    <p>Click the button below to get 0.1 POLLEN test token (once every 24 hours).</p>
+    <p>Enter your address below and click the button to get 0.1 POLLEN test token (once every 24 hours).</p>
+    <input type="text" id="addressInput" placeholder="Enter your address" style="width: 300px; padding: 5px; margin-bottom: 10px;">
     <button id="claimBtn">Get 0.1 POLLEN</button>
     <p id="status"></p>
 
@@ -17,7 +18,7 @@
         // Define Web3 instance
         let web3;
         let contract;
-        const contractAddress = 'YOUR_FAUCET_CONTRACT_ADDRESS'; // Replace with your deployed contract address
+        const contractAddress = '0x346a46583eB77ED742673b3E9735fAEaA676394B'; // Your deployed contract address
         const abi = [
             // ABI from the Faucet contract
             {
@@ -29,27 +30,80 @@
             }
         ];
 
-        // Initialize web3
+        // Network parameters for Pollen Chain
+        const networkParams = {
+            chainId: '0x7ea', // Chain ID 2026 in hexadecimal
+            chainName: 'Pollen Chain Testnet',
+            nativeCurrency: {
+                name: 'Pollen Token',
+                symbol: 'POL',
+                decimals: 18,
+            },
+            rpcUrls: ['https://rpc.pollenpost.io'], // Pollen Chain RPC URL
+            blockExplorerUrls: ['https://testplorer.pollenpost.io'], // Pollen Chain block explorer
+        };
+
+        // Function to switch network in MetaMask
+        async function switchNetwork() {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: networkParams.chainId }],
+                    });
+                } catch (switchError) {
+                    // If the network is not added, add it
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [networkParams],
+                            });
+                        } catch (addError) {
+                            console.error('Failed to add network:', addError.message);
+                            document.getElementById('status').innerText = 'Failed to add network: ' + addError.message;
+                        }
+                    } else {
+                        console.error('Failed to switch network:', switchError.message);
+                        document.getElementById('status').innerText = 'Failed to switch network: ' + switchError.message;
+                    }
+                }
+            } else {
+                alert('MetaMask is not installed. Please install MetaMask to use this dApp.');
+            }
+        }
+
+        // Initialize web3 and connect to the contract
         window.addEventListener('load', async () => {
             if (window.ethereum) {
                 web3 = new Web3(window.ethereum);
-                await window.ethereum.request({ method: 'eth_requestAccounts' });
-                const accounts = await web3.eth.getAccounts();
-                contract = new web3.eth.Contract(abi, contractAddress);
+                await switchNetwork();
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    contract = new web3.eth.Contract(abi, contractAddress);
+                } catch (error) {
+                    document.getElementById('status').innerText = 'Failed to connect to MetaMask: ' + error.message;
+                }
             } else {
                 document.getElementById('status').innerText = 'Please install MetaMask!';
             }
         });
 
+        // Event listener for the claim button
         document.getElementById('claimBtn').addEventListener('click', async () => {
-            const accounts = await web3.eth.getAccounts();
-            const userAddress = accounts[0];
+            const userAddress = document.getElementById('addressInput').value.trim();
+
+            // Check if the address is valid
+            if (!web3.utils.isAddress(userAddress)) {
+                document.getElementById('status').innerText = 'Please enter a valid Ethereum address.';
+                return;
+            }
 
             try {
                 await contract.methods.claimTokens().send({ from: userAddress });
                 document.getElementById('status').innerText = 'Successfully claimed 0.1 POLLEN!';
             } catch (error) {
-                document.getElementById('status').innerText = error.message;
+                document.getElementById('status').innerText = 'Error: ' + error.message;
             }
         });
     </script>

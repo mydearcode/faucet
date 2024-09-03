@@ -1,31 +1,57 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
 
-interface IERC20 {
-    function transfer(address recipient, uint256 amount) external returns (bool);
-}
+pragma solidity ^0.8.3;
 
-contract POLLENFaucet {
-    IERC20 public token;  // ERC20 token interface
-    uint256 public claimAmount = 0.1 * 10**18; // Adjust for the token's decimals, assuming 18
-    mapping(address => uint256) public lastClaimed;
+contract faucet {
+	
 
-    // Set the token contract address upon deployment
-    constructor(address _tokenAddress) {
-        token = IERC20(_tokenAddress);
+    //state variable to keep track of owner and amount of ETHER to dispense
+    address public owner;
+    uint public amountAllowed = 0.5 pollen;
+
+
+    //mapping to keep track of requested rokens
+    //Address and blocktime + 1 day is saved in TimeLock
+    mapping(address => uint) public lockTime;
+
+
+    //constructor to set the owner
+    constructor() payable { 
+	owner = msg.sender;
     }
 
-    // Function to claim POLLEN tokens
-    function claimTokens() external {
-        require(
-            block.timestamp > lastClaimed[msg.sender] + 24 hours,
-            "You already claimed POLLEN test token in the last 24 hours."
-        );
+    //function modifier
+    modifier onlyOwner {
+        require(msg.sender == owner, "Only owner can call this function.");
+        _; 
+    }
 
-        lastClaimed[msg.sender] = block.timestamp;
-        require(
-            token.transfer(msg.sender, claimAmount),
-            "Token transfer failed."
-        );
+
+    //function to change the owner.  Only the owner of the contract can call this function
+    function setOwner(address newOwner) public onlyOwner {
+        owner = newOwner;
+    }
+
+
+    //function to set the amount allowable to be claimed. Only the owner can call this function
+    function setAmountallowed(uint setAmountAllowed) public onlyOwner {
+        amountAllowed = setAmountAllowed;
+    }
+
+    // function to add funds to the smart contract
+    function addFunds() public payable { }
+
+    //function to send tokens from faucet to an address
+    function requestTokens(address payable _requestor) public payable onlyOwner {
+
+        //perform a few checks to make sure function can execute
+        require(block.timestamp > lockTime[_requestor], "Lock time has not expired. Please try again later");
+        require(address(this).balance > amountAllowed, "Not enough funds in the faucet.");
+
+        //if the balance of this contract is greater then the requested amount send funds
+        _requestor.transfer(0.5 pollen);        
+ 
+        //updates locktime 1 day from now
+        lockTime[_requestor] = block.timestamp + 1 days;
     }
 }
